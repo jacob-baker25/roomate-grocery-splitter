@@ -28,13 +28,17 @@ button { cursor: pointer; }
 .sectionTitle h2 { margin: 0 0 5px; font-size: 1.25rem; letter-spacing: -.02em; }
 .sectionTitle p { margin: 0; color: var(--muted); line-height: 1.45; }
 .step { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: white; font-weight: 800; flex: 0 0 auto; }
-.segmented { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.segmented button { border: 1px solid var(--line); border-radius: 12px; padding: 12px 0; background: white; font-weight: 750; }
-.segmented button.active { background: var(--ink); color: white; border-color: var(--ink); }
 .nameGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.participantToggle { display: grid; grid-template-columns: 28px auto 1fr; align-items: center; gap: 10px; min-height: 58px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: white; color: var(--ink); text-align: left; }
+.participantToggle.selected { border-color: #89b89d; background: var(--green-soft); }
+.participantCheck { display: grid; place-items: center; width: 26px; height: 26px; border: 1.5px solid #aeb7b0; border-radius: 8px; color: white; font-weight: 900; }
+.participantToggle.selected .participantCheck { background: var(--green); border-color: var(--green); }
+.participantLabel { color: var(--muted); font-size: .78rem; white-space: nowrap; }
+.participantToggle strong { overflow-wrap: anywhere; }
 label { display: flex; flex-direction: column; gap: 7px; font-weight: 700; font-size: .88rem; }
 label span { color: var(--muted); }
 input, select { width: 100%; border: 1px solid var(--line); background: white; color: var(--ink); border-radius: 12px; padding: 12px 13px; outline: none; }
+select:disabled { background: #f3f4f0; color: var(--muted); cursor: not-allowed; }
 input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(31,107,70,.12); }
 .upload { min-height: 150px; border: 1.5px dashed #aeb8b1; border-radius: 18px; display: grid; place-items: center; align-content: center; gap: 5px; background: #faf9f5; text-align: center; cursor: pointer; }
 .upload input { position: absolute; opacity: 0; pointer-events: none; }

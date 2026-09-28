@@ -5,8 +5,8 @@ import { formatMoney } from "../lib/money.js";
 import { HOUSEHOLD_NAMES } from "../lib/household.js";
 
 export default function Home() {
-  const [count, setCount] = useState(6);
-  const [payerIndex, setPayerIndex] = useState(0);
+  const [selectedNames, setSelectedNames] = useState([...HOUSEHOLD_NAMES]);
+  const [payerName, setPayerName] = useState(HOUSEHOLD_NAMES[0]);
   const [receipt, setReceipt] = useState(null);
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -17,14 +17,29 @@ export default function Home() {
     if (!saved) return;
     try {
       const parsed = JSON.parse(saved);
-      if (parsed.count) setCount(Math.min(6, Math.max(1, parsed.count)));
-      if (Number.isInteger(parsed.payerIndex)) setPayerIndex(parsed.payerIndex);
+      const savedNames = Array.isArray(parsed.selectedNames)
+        ? HOUSEHOLD_NAMES.filter((name) => parsed.selectedNames.includes(name))
+        : HOUSEHOLD_NAMES.slice(0, Math.min(6, Math.max(1, parsed.count || 6)));
+      setSelectedNames(savedNames);
+      const savedPayer = parsed.payerName || savedNames[parsed.payerIndex];
+      setPayerName(savedNames.includes(savedPayer) ? savedPayer : savedNames[0]);
     } catch {}
   }, []);
 
-  const activeNames = HOUSEHOLD_NAMES.slice(0, count);
   const itemTotal = useMemo(() => items.reduce((sum, i) => sum + Number(i.price_cents || 0), 0), [items]);
   const receiptMatches = receipt?.subtotalCents == null || itemTotal === receipt.subtotalCents;
+
+  function togglePerson(name) {
+    setSelectedNames((current) => {
+      const next = current.includes(name)
+        ? current.filter((person) => person !== name)
+        : HOUSEHOLD_NAMES.filter((person) => current.includes(person) || person === name);
+
+      if (name === payerName && !next.includes(name)) setPayerName(next[0]);
+      if (!payerName && next.length) setPayerName(next[0]);
+      return next;
+    });
+  }
 
   async function parseReceipt(file) {
     if (!file) return;
@@ -51,15 +66,17 @@ export default function Home() {
 
   async function createTrip() {
     setError("");
+    if (!selectedNames.length) return setError("Choose at least one person for this trip.");
     if (!items.length) return setError("Upload a receipt or add at least one item.");
 
     setBusy(true);
     try {
-      localStorage.setItem("costco-splitter-household", JSON.stringify({ count, payerIndex }));
+      const payerIndex = selectedNames.indexOf(payerName);
+      localStorage.setItem("costco-splitter-household", JSON.stringify({ selectedNames, payerName }));
       const response = await fetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names: activeNames, payerIndex, receipt, items })
+        body: JSON.stringify({ names: selectedNames, payerIndex, receipt, items })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create trip.");
@@ -74,19 +91,26 @@ export default function Home() {
     <div className="stack xl">
       <header className="hero">
         <span className="eyebrow">WEEKLY COSTCO RUN</span>
-        <h1>Split the cart, not the headache.</h1>
-        <p>Upload the Costco receipt, choose who is participating this week, and send one link so everyone can claim the items they want to split.</p>
+        <h1>Costco receipt splitter</h1>
+        <p>Choose who came on this trip, upload the receipt, and share the link with the roommates who need it.</p>
       </header>
 
       <section className="card stack">
-        <div className="sectionTitle"><span className="step">1</span><div><h2>People this trip</h2><p>Use fewer than six if someone bought nothing this week.</p></div></div>
-        <div className="segmented">
-          {[1,2,3,4,5,6].map((n) => <button key={n} className={count === n ? "active" : ""} onClick={() => { setCount(n); setPayerIndex((p) => Math.min(p, n - 1)); }}>{n}</button>)}
-        </div>
+        <div className="sectionTitle"><span className="step">1</span><div><h2>People this trip</h2><p>Select each roommate who should be included.</p></div></div>
         <div className="nameGrid">
-          {activeNames.map((name, i) => <div key={name}><span>Person {i + 1}</span><strong>{name}</strong></div>)}
+          {HOUSEHOLD_NAMES.map((name, i) => {
+            const selected = selectedNames.includes(name);
+            return <button key={name} type="button" className={`participantToggle${selected ? " selected" : ""}`} aria-pressed={selected} onClick={() => togglePerson(name)}>
+              <span className="participantCheck" aria-hidden="true">{selected ? "✓" : ""}</span>
+              <span className="participantLabel">Person {i + 1}</span>
+              <strong>{name}</strong>
+            </button>;
+          })}
         </div>
-        <label><span>Who paid?</span><select value={payerIndex} onChange={(e) => setPayerIndex(Number(e.target.value))}>{activeNames.map((name, i) => <option key={i} value={i}>{name || `Person ${i+1}`}</option>)}</select></label>
+        <label><span>Who paid?</span><select value={payerName || ""} disabled={!selectedNames.length} onChange={(e) => setPayerName(e.target.value)}>
+          {!selectedNames.length && <option value="">Select someone above</option>}
+          {selectedNames.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select></label>
       </section>
 
       <section className="card stack">
@@ -116,7 +140,7 @@ export default function Home() {
       </section>
 
       {error && <div className="error">{error}</div>}
-      <button className="primary big" disabled={busy || !items.length} onClick={createTrip}>{busy && receipt ? "Creating…" : "Create trip & get share link"}</button>
+      <button className="primary big" disabled={busy || !items.length || !selectedNames.length} onClick={createTrip}>{busy && receipt ? "Creating…" : "Create trip & get share link"}</button>
       <p className="fineprint">No roommate accounts are required. Anyone with the trip link can update that trip, so treat the link like a small shared household link.</p>
     </div>
   );
