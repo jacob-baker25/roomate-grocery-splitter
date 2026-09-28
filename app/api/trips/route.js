@@ -24,6 +24,22 @@ export async function POST(request) {
       return NextResponse.json({ error: "Add at least one receipt item." }, { status: 400 });
     }
 
+    const requestedGroupKey = String(body.groupAccessKey || "").trim();
+    let tripGroup;
+    if (requestedGroupKey) {
+      const groups = await db.select("trip_groups", `access_key=eq.${encodeURIComponent(requestedGroupKey)}&select=id,access_key`);
+      tripGroup = groups?.[0];
+      if (!tripGroup) {
+        return NextResponse.json({ error: "That shared trip list could not be found." }, { status: 400 });
+      }
+    } else {
+      const createdGroups = await db.insert("trip_groups", [{
+        id: crypto.randomUUID(),
+        access_key: crypto.randomBytes(18).toString("base64url")
+      }]);
+      tripGroup = createdGroups?.[0];
+    }
+
     const tripId = crypto.randomUUID();
     const accessKey = crypto.randomBytes(12).toString("base64url");
     const payerIndex = Math.min(Math.max(Number(body.payerIndex) || 0, 0), names.length - 1);
@@ -32,6 +48,7 @@ export async function POST(request) {
     await db.insert("trips", [{
       id: tripId,
       access_key: accessKey,
+      trip_group_id: tripGroup.id,
       payer_participant_id: participantIds[payerIndex],
       store_name: String(body.receipt?.store || "Costco").slice(0, 100),
       receipt_date: body.receipt?.receiptDate || null,
@@ -60,7 +77,7 @@ export async function POST(request) {
       sort_order: index
     })));
 
-    return NextResponse.json({ accessKey });
+    return NextResponse.json({ accessKey, groupAccessKey: tripGroup.access_key });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: error.message || "Could not create trip." }, { status: 500 });

@@ -57,12 +57,17 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .moneyInput span { position: absolute; left: 11px; top: 12px; color: var(--muted); }
 .moneyInput input { padding-left: 25px; }
 .iconButton { border: 0; background: transparent; font-size: 1.6rem; color: var(--muted); width: 35px; }
-.textButton, .linkButton { border: 0; background: transparent; color: var(--green); font-weight: 800; padding: 6px 0; }
+.textButton, .linkButton { border: 0; background: transparent; color: var(--green); font-weight: 800; padding: 6px 0; text-decoration: none; }
 .primary, .secondary { border-radius: 15px; padding: 13px 18px; font-weight: 800; border: 1px solid var(--ink); }
 .primary { background: var(--ink); color: white; }
 .primary.big { padding: 17px 22px; font-size: 1rem; }
 .primary:disabled { opacity: .5; cursor: not-allowed; }
 .secondary { background: transparent; color: var(--ink); }
+.centerButton { display: block; text-align: center; text-decoration: none; }
+.groupNotice { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid #b9dac6; border-radius: 15px; background: var(--green-soft); }
+.groupNotice span { display: flex; flex-direction: column; gap: 2px; }
+.groupNotice small { color: #38624d; line-height: 1.35; }
+.groupNotice a { color: var(--green); font-weight: 800; white-space: nowrap; }
 .fineprint { text-align: center; color: var(--muted); font-size: .82rem; line-height: 1.5; margin: 0; }
 .error, .warningBox, .successBox { border-radius: 14px; padding: 14px 16px; line-height: 1.45; }
 .error { background: #f8e7e5; color: #772a24; border: 1px solid #e7b7b2; }
@@ -73,7 +78,17 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .personPicker button { min-height: 88px; background: white; border: 1px solid var(--line); border-radius: 16px; text-align: left; padding: 15px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
 .personPicker strong { font-size: 1.05rem; }.personPicker span { color: var(--muted); font-size: .82rem; }
 .topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.topActions { display: flex; align-items: center; gap: 16px; }
 .statusStrip { grid-template-columns: repeat(3, 1fr); }
+.tripGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.tripCard { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.86); color: var(--ink); text-decoration: none; box-shadow: 0 8px 24px rgba(31,46,37,.05); transition: .15s ease; }
+.tripCard:hover { transform: translateY(-2px); border-color: #aeb8b1; box-shadow: 0 12px 28px rgba(31,46,37,.09); }
+.tripCard h2 { margin: 14px 0 12px; font-size: 1.25rem; letter-spacing: -.025em; }
+.tripCard small { display: block; margin-top: 10px; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
+.tripStatus { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #fff6d9; color: #775f20; font-size: .72rem; font-weight: 800; }
+.tripStatus.complete { background: var(--green-soft); color: var(--green); }
+.tripMeta { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); }
+.tripMeta strong { color: var(--ink); }
 .itemList { gap: 10px; }
 .itemCard { width: 100%; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.84); padding: 15px; display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; text-align: left; transition: .15s ease; }
 .itemCard:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(31,46,37,.07); }
@@ -102,4 +117,7 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
   .itemCard { grid-template-columns: 34px 1fr; }
   .itemPrice { grid-column: 2; flex-direction: row; align-items: center; justify-content: space-between; text-align: left; width: 100%; }
   .buttonRow { grid-template-columns: 1fr; }
+  .tripGrid { grid-template-columns: 1fr; }
+  .topActions { gap: 10px; }
+  .groupNotice { align-items: flex-start; }
 }

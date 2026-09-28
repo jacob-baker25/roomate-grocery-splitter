@@ -16,6 +16,7 @@ export default function TripClient({ accessKey }) {
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || "Could not load trip.");
       setData(json);
+      if (json.tripGroup?.access_key) localStorage.setItem("costco-splitter-trip-group", json.tripGroup.access_key);
       if (!silent) setError("");
     } catch (e) {
       if (!silent) setError(e.message);
@@ -31,8 +32,20 @@ export default function TripClient({ accessKey }) {
   }, [accessKey]);
 
   useEffect(() => {
-    if (data && personId && !data.participants.some((p) => p.id === personId)) setPersonId(null);
-  }, [data, personId]);
+    if (!data) return;
+    if (personId && !data.participants.some((p) => p.id === personId)) {
+      setPersonId(null);
+      return;
+    }
+    if (!personId && data.tripGroup?.access_key) {
+      const savedName = localStorage.getItem(`costco-splitter-person-name-${data.tripGroup.access_key}`);
+      const savedPerson = data.participants.find((person) => person.name === savedName);
+      if (savedPerson) {
+        setPersonId(savedPerson.id);
+        localStorage.setItem(`costco-splitter-person-${accessKey}`, savedPerson.id);
+      }
+    }
+  }, [accessKey, data, personId]);
 
   const me = data?.participants.find((p) => p.id === personId);
   const selectedSet = useMemo(() => new Set((data?.selections || []).filter((s) => s.participant_id === personId).map((s) => s.item_id)), [data, personId]);
@@ -42,6 +55,10 @@ export default function TripClient({ accessKey }) {
   function choosePerson(id) {
     setPersonId(id);
     localStorage.setItem(`costco-splitter-person-${accessKey}`, id);
+    const person = data?.participants.find((participant) => participant.id === id);
+    if (person && data?.tripGroup?.access_key) {
+      localStorage.setItem(`costco-splitter-person-name-${data.tripGroup.access_key}`, person.name);
+    }
   }
 
   async function toggle(itemId, selected) {
@@ -75,7 +92,9 @@ export default function TripClient({ accessKey }) {
   }
 
   async function share() {
-    const url = window.location.href;
+    const url = data?.tripGroup?.access_key
+      ? `${window.location.origin}/list/${data.tripGroup.access_key}`
+      : window.location.href;
     if (navigator.share) {
       try { await navigator.share({ title: "Costco split", url }); return; } catch {}
     }
@@ -97,18 +116,18 @@ export default function TripClient({ accessKey }) {
 
   if (!me) return (
     <div className="stack xl">
-      <header className="hero compact"><span className="eyebrow">COSTCO SPLIT</span><h1>Who are you?</h1><p>Pick your name. No login required.</p></header>
+      <header className="hero compact"><div className="topline"><span className="eyebrow">COSTCO SPLIT</span>{data.tripGroup?.access_key && <a className="linkButton" href={`/list/${data.tripGroup.access_key}`}>All trips</a>}</div><h1>Who are you?</h1><p>Pick your name. No login required.</p></header>
       <section className="card stack">
         <div className="personPicker">{data.participants.map((p) => <button key={p.id} onClick={() => choosePerson(p.id)}><strong>{p.name}</strong><span>{p.responded ? "✓ Done" : "Not finished"}</span></button>)}</div>
       </section>
-      <button className="secondary" onClick={share}>{copied ? "Link copied" : "Share trip link"}</button>
+      <button className="secondary" onClick={share}>{copied ? "Link copied" : data.tripGroup ? "Share trip list" : "Share trip link"}</button>
     </div>
   );
 
   return (
     <div className="stack xl">
       <header className="hero compact">
-        <div className="topline"><span className="eyebrow">{data.trip.store_name || "COSTCO"}</span><button className="linkButton" onClick={() => { setPersonId(null); localStorage.removeItem(`costco-splitter-person-${accessKey}`); }}>Switch person</button></div>
+        <div className="topline"><span className="eyebrow">{data.trip.store_name || "COSTCO"}</span><div className="topActions">{data.tripGroup?.access_key && <a className="linkButton" href={`/list/${data.tripGroup.access_key}`}>All trips</a>}<button className="linkButton" onClick={() => { setPersonId(null); localStorage.removeItem(`costco-splitter-person-${accessKey}`); if (data.tripGroup?.access_key) localStorage.removeItem(`costco-splitter-person-name-${data.tripGroup.access_key}`); }}>Switch person</button></div></div>
         <h1>Hey, {me.name}.</h1>
         <p>Tap every item you want to be part of. The price automatically divides among everyone who selects it.</p>
       </header>
@@ -133,6 +152,7 @@ export default function TripClient({ accessKey }) {
       </section>
 
       <button className="primary big" onClick={markDone}>{me.responded ? "✓ You're marked done" : "I'm done choosing"}</button>
+      {data.tripGroup?.access_key && <a className="secondary centerButton" href={`/list/${data.tripGroup.access_key}`}>Back to all trips</a>}
       {data.split.unclaimedCents > 0 && <div className="warningBox"><strong>{formatMoney(data.split.unclaimedCents)} is still unclaimed.</strong><span>That is okay while people are responding, but check it before sending Venmo requests.</span></div>}
 
       <section className="card stack">
@@ -141,7 +161,7 @@ export default function TripClient({ accessKey }) {
           {data.participants.map((p) => <div key={p.id}><span><strong>{p.name}</strong><small>{p.id === payer?.id ? "Paid the Costco bill" : p.responded ? "Done" : "Waiting"}</small></span><strong>{formatMoney(data.split.totals[p.id] || 0)}</strong></div>)}
         </div>
         {allDone && data.split.unclaimedCents === 0 && <div className="successBox">Everything is assigned. {payer?.name} can request each non-payer for the amount shown above.</div>}
-        <div className="buttonRow"><button className="secondary" onClick={share}>Share link</button><button className="secondary" onClick={copyRequests}>{copied ? "Copied" : "Copy Venmo amounts"}</button></div>
+        <div className="buttonRow"><button className="secondary" onClick={share}>{data.tripGroup ? "Share trip list" : "Share link"}</button><button className="secondary" onClick={copyRequests}>{copied ? "Copied" : "Copy Venmo amounts"}</button></div>
       </section>
 
       <p className="fineprint">Penny remainders are assigned deterministically so every item adds back to its exact receipt price.</p>

@@ -7,12 +7,19 @@ import { HOUSEHOLD_NAMES } from "../lib/household.js";
 export default function Home() {
   const [selectedNames, setSelectedNames] = useState([...HOUSEHOLD_NAMES]);
   const [payerName, setPayerName] = useState(HOUSEHOLD_NAMES[0]);
+  const [groupAccessKey, setGroupAccessKey] = useState("");
   const [receipt, setReceipt] = useState(null);
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const requestedGroup = new URLSearchParams(window.location.search).get("group");
+    const savedGroup = localStorage.getItem("costco-splitter-trip-group");
+    const activeGroup = requestedGroup || savedGroup || "";
+    setGroupAccessKey(activeGroup);
+    if (requestedGroup) localStorage.setItem("costco-splitter-trip-group", requestedGroup);
+
     const saved = localStorage.getItem("costco-splitter-household");
     if (!saved) return;
     try {
@@ -76,10 +83,11 @@ export default function Home() {
       const response = await fetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names: selectedNames, payerIndex, receipt, items })
+        body: JSON.stringify({ names: selectedNames, payerIndex, receipt, items, groupAccessKey })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create trip.");
+      localStorage.setItem("costco-splitter-trip-group", data.groupAccessKey);
       window.location.href = `/trip/${data.accessKey}`;
     } catch (e) {
       setError(e.message);
@@ -94,6 +102,11 @@ export default function Home() {
         <h1>Costco receipt splitter</h1>
         <p>Choose who came on this trip, upload the receipt, and share the link with the roommates who need it.</p>
       </header>
+
+      {groupAccessKey && <div className="groupNotice">
+        <span><strong>Adding to your shared trip list</strong><small>Roommates will be able to switch between this trip and the others.</small></span>
+        <a href={`/list/${groupAccessKey}`}>View trips</a>
+      </div>}
 
       <section className="card stack">
         <div className="sectionTitle"><span className="step">1</span><div><h2>People this trip</h2><p>Select each roommate who should be included.</p></div></div>

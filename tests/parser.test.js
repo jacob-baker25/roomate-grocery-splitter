@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseCostcoText } from "../lib/costcoParser.js";
+import { getCostcoDisplayName, parseCostcoText } from "../lib/costcoParser.js";
 import { calculateSplit } from "../lib/split.js";
 
 const sample = `
@@ -34,11 +34,43 @@ test("Costco parser handles the supplied receipt shape and item discount", () =>
   assert.equal(parsed.totalCents, 28737);
   assert.equal(parsed.parsedItemCents, 28737);
   const butter = parsed.items.find((i) => i.code === "1424237");
+  assert.equal(butter.name, "Kirkland Grass-Fed Salted Butter");
   assert.equal(butter.original_price_cents, 999);
   assert.equal(butter.discount_cents, 200);
   assert.equal(butter.price_cents, 799);
   const chicken = parsed.items.find((i) => i.code === "1446716");
   assert.equal(chicken.quantity, 2);
+  assert.equal(chicken.name, "Grilled Chipotle Seasoned Chicken");
+  assert.equal(parsed.items.find((i) => i.code === "1701671").name, "Kirkland Scented Kitchen Trash Bags");
+});
+
+test("Costco item numbers get stable display names", () => {
+  const expectedNames = {
+    "1150189": "SkinnyPop Organic Popcorn",
+    "1424237": "Kirkland Grass-Fed Salted Butter",
+    "33724": "Ground Beef 88% Lean / 12% Fat",
+    "1193444": "Kirkland Red Plastic Cups",
+    "637598": "Kirkland Large Cage-Free Eggs",
+    "47292": "Wild Sockeye Salmon Fillet",
+    "1701671": "Kirkland Scented Kitchen Trash Bags",
+    "58685": "4C Seasoned Bread Crumbs",
+    "1446716": "Grilled Chipotle Seasoned Chicken",
+    "1963389": "Miami Beef Grass-Fed Ground Beef",
+    "33841": "Kirkland Boneless Skinless Chicken Breasts",
+    "1737607": "Real Good Chicken & Pepper Jack Burritos",
+    "1831841": "Goodles Mac & Cheese Variety Pack",
+    "428409": "Gold Star Membership Renewal",
+    "1602320": "Kirkland Organic Ground Paprika",
+    "848008": "McCormick Garlic Powder",
+    "992756": "Kraft Grated Parmesan Cheese",
+    "803428": "Barilla Thin Spaghetti",
+    "1919326": "Bounty Advanced Paper Towels"
+  };
+
+  for (const [itemCode, displayName] of Object.entries(expectedNames)) {
+    assert.equal(getCostcoDisplayName(itemCode, "Receipt wording can change"), displayName);
+  }
+  assert.equal(getCostcoDisplayName("999999", "  unknown   item  "), "unknown item");
 });
 
 test("split math preserves every penny", () => {

@@ -10,6 +10,8 @@ A small Next.js app for a six-person household Costco run. One person uploads th
 - Uploads a **Costco Orders & Purchases PDF** and extracts item code, abbreviated item name, item price, quantity hints, item-level instant savings, subtotal, tax, total and receipt date when available.
 - Shows the parsed items for manual correction before the trip is created.
 - Creates an unguessable shared link. No roommate accounts/passwords are needed.
+- Groups multiple receipts under one private household trip-list link, with response progress for each trip.
+- Remembers a roommate's selected name while they move between trips in the shared list.
 - Lets each roommate choose their name and toggle any item on/off.
 - Supports any split from 1 person through everyone on each item.
 - Uses cent-safe rounding. Example: $10 / 3 becomes $3.34 + $3.33 + $3.33, so the receipt always reconciles.
@@ -29,6 +31,8 @@ A small Next.js app for a six-person household Costco run. One person uploads th
 
 Create a Supabase project and run `supabase/schema.sql` in the Supabase SQL editor.
 
+If the database was created with an earlier version of the app, run `supabase/trip-groups-migration.sql` once instead. It adds the shared trip-list table and places existing trips into one list without changing their direct links.
+
 The schema enables RLS and creates no browser-access policies. The app talks to Supabase only from server API routes with the service-role key. Do **not** expose the service-role key in client code.
 
 ## 2. Configure environment variables
@@ -39,12 +43,14 @@ Copy `.env.example` to `.env.local`:
 cp .env.example .env.local
 ```
 
-Fill in:
+Fill in the project URL and server-only secret key from Supabase's **Settings > API Keys** page:
 
 ```env
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+SUPABASE_SECRET_KEY=sb_secret_YOUR_SECRET_KEY
 ```
+
+The legacy `SUPABASE_SERVICE_ROLE_KEY` variable is also supported for existing projects. Never use a publishable or anon key here, and never prefix either variable with `NEXT_PUBLIC_`.
 
 ## 3. Run locally
 
@@ -65,10 +71,10 @@ npm test
 
 1. Push this folder to GitHub.
 2. Import the repository into Vercel.
-3. Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the Vercel project environment variables.
-4. Deploy.
+3. Add `SUPABASE_URL` and `SUPABASE_SECRET_KEY` to the Vercel project environment variables for Production (and Preview if you use preview deployments).
+4. Redeploy so the new environment variables are available to the server functions.
 
-The created trip URL is what you send to the roommates.
+Share the trip-list URL with the roommates. It lets them open every receipt, shows response progress, and carries their chosen name from one trip to the next.
 
 ## Costco PDF parser notes
 
@@ -78,6 +84,7 @@ The parser is intentionally tuned first to the Costco.com Orders & Purchases PDF
 - recognizes Costco lines such as `E 1150189 ORG SKINYPOP 6.99 N`;
 - applies discount rows such as `388719 /1424237 2.00-` back to the matching item code;
 - recognizes a quantity hint like `2 @ 11.99` and associates it with the next line item;
+- translates known Costco item numbers into stable, clearer display names while leaving unknown names unchanged;
 - compares the sum of parsed net item prices to the receipt subtotal before the trip is created.
 
 Because Costco may alter its PDF format, the creator can edit every parsed item before creating a trip. If a future receipt layout fails, `lib/costcoParser.js` is the main file to extend.
@@ -87,10 +94,10 @@ Because Costco may alter its PDF format, the creator can edit every parsed item 
 - Tax is captured from the receipt but not automatically allocated. This is irrelevant to the supplied Delaware receipt because its tax is $0.00, but a tax-allocation rule should be added before using this broadly in taxable locations.
 - Anyone with a trip link can change selections. That is deliberate for a six-person household MVP. A creator/admin token can be added later if you want locked/finalized trips.
 - Roommates mark themselves done manually. Editing a selection automatically marks them unfinished again.
-- Item names are Costco's abbreviated receipt descriptions. A future version could map recurring item codes to friendlier saved names (for example, `BNLS/SL BRST` -> `Chicken breast`).
+- Known item numbers have hard-coded friendlier names. Unknown receipt descriptions remain unchanged and can be edited before creating the trip.
 - It polls every five seconds rather than using Supabase Realtime.
 - There is no Venmo API integration; it generates/copies request amounts for the payer.
 
 ## Suggested next upgrades
 
-The most useful next changes are likely: saved friendly item names by Costco item code, a creator-only finalize/lock action, recurring household defaults, true realtime updates, and a weekly history page showing past trips and totals.
+The most useful next changes are likely: expanding the friendly-name catalog as new Costco item numbers appear, a creator-only finalize/lock action, recurring household defaults, true realtime updates, and a weekly history page showing past trips and totals.
