@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { db } from "../../../lib/db.js";
+import { HOUSEHOLD_NAMES } from "../../../lib/household.js";
 
 function cleanName(value) {
   return String(value || "").trim().slice(0, 40);
@@ -12,6 +13,9 @@ export async function POST(request) {
     const names = (body.names || []).map(cleanName).filter(Boolean);
     if (names.length < 1 || names.length > 6) {
       return NextResponse.json({ error: "Choose between 1 and 6 people." }, { status: 400 });
+    }
+    if (names.some((name) => !HOUSEHOLD_NAMES.includes(name))) {
+      return NextResponse.json({ error: "Choose people from the household list." }, { status: 400 });
     }
     if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) {
       return NextResponse.json({ error: "Each person needs a unique name." }, { status: 400 });

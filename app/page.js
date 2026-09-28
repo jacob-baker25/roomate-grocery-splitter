@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatMoney } from "../lib/money.js";
-
-const DEFAULT_NAMES = ["You", "Roommate 2", "Roommate 3", "Roommate 4", "Roommate 5", "Roommate 6"];
+import { HOUSEHOLD_NAMES } from "../lib/household.js";
 
 export default function Home() {
   const [count, setCount] = useState(6);
-  const [names, setNames] = useState(DEFAULT_NAMES);
   const [payerIndex, setPayerIndex] = useState(0);
   const [receipt, setReceipt] = useState(null);
   const [items, setItems] = useState([]);
@@ -19,19 +17,14 @@ export default function Home() {
     if (!saved) return;
     try {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed.names)) setNames([...DEFAULT_NAMES.map((x) => x), ...parsed.names].slice(0, 6).map((n, i) => parsed.names[i] || DEFAULT_NAMES[i]));
       if (parsed.count) setCount(Math.min(6, Math.max(1, parsed.count)));
       if (Number.isInteger(parsed.payerIndex)) setPayerIndex(parsed.payerIndex);
     } catch {}
   }, []);
 
-  const activeNames = names.slice(0, count);
+  const activeNames = HOUSEHOLD_NAMES.slice(0, count);
   const itemTotal = useMemo(() => items.reduce((sum, i) => sum + Number(i.price_cents || 0), 0), [items]);
   const receiptMatches = receipt?.subtotalCents == null || itemTotal === receipt.subtotalCents;
-
-  function updateName(index, value) {
-    setNames((current) => current.map((name, i) => (i === index ? value : name)));
-  }
 
   async function parseReceipt(file) {
     if (!file) return;
@@ -58,18 +51,15 @@ export default function Home() {
 
   async function createTrip() {
     setError("");
-    const cleaned = activeNames.map((n) => n.trim());
-    if (cleaned.some((n) => !n)) return setError("Give each person a name so roommates can identify themselves.");
-    if (new Set(cleaned.map((n) => n.toLowerCase())).size !== cleaned.length) return setError("Names need to be unique.");
     if (!items.length) return setError("Upload a receipt or add at least one item.");
 
     setBusy(true);
     try {
-      localStorage.setItem("costco-splitter-household", JSON.stringify({ names, count, payerIndex }));
+      localStorage.setItem("costco-splitter-household", JSON.stringify({ count, payerIndex }));
       const response = await fetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names: cleaned, payerIndex, receipt, items })
+        body: JSON.stringify({ names: activeNames, payerIndex, receipt, items })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create trip.");
@@ -94,7 +84,7 @@ export default function Home() {
           {[1,2,3,4,5,6].map((n) => <button key={n} className={count === n ? "active" : ""} onClick={() => { setCount(n); setPayerIndex((p) => Math.min(p, n - 1)); }}>{n}</button>)}
         </div>
         <div className="nameGrid">
-          {activeNames.map((name, i) => <label key={i}><span>Person {i + 1}</span><input value={name} onChange={(e) => updateName(i, e.target.value)} /></label>)}
+          {activeNames.map((name, i) => <div key={name}><span>Person {i + 1}</span><strong>{name}</strong></div>)}
         </div>
         <label><span>Who paid?</span><select value={payerIndex} onChange={(e) => setPayerIndex(Number(e.target.value))}>{activeNames.map((name, i) => <option key={i} value={i}>{name || `Person ${i+1}`}</option>)}</select></label>
       </section>
