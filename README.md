@@ -33,6 +33,8 @@ Create a Supabase project and run `supabase/schema.sql` in the Supabase SQL edit
 
 If the database was created with an earlier version of the app, run `supabase/trip-groups-migration.sql` once instead. It adds the shared trip-list table and places existing trips into one list without changing their direct links.
 
+Run `supabase/rename-will-migration.sql` once to rename Will on trips that were created before the household-name update.
+
 The schema enables RLS and creates no browser-access policies. The app talks to Supabase only from server API routes with the service-role key. Do **not** expose the service-role key in client code.
 
 ## 2. Configure environment variables

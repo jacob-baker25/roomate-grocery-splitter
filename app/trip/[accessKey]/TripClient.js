@@ -38,7 +38,8 @@ export default function TripClient({ accessKey }) {
       return;
     }
     if (!personId && data.tripGroup?.access_key) {
-      const savedName = localStorage.getItem(`costco-splitter-person-name-${data.tripGroup.access_key}`);
+      const storedName = localStorage.getItem(`costco-splitter-person-name-${data.tripGroup.access_key}`);
+      const savedName = storedName === "Gay Will" ? "Will" : storedName;
       const savedPerson = data.participants.find((person) => person.name === savedName);
       if (savedPerson) {
         setPersonId(savedPerson.id);

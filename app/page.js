@@ -24,11 +24,14 @@ export default function Home() {
     if (!saved) return;
     try {
       const parsed = JSON.parse(saved);
+      const legacyNames = Array.isArray(parsed.selectedNames)
+        ? parsed.selectedNames.map((name) => name === "Gay Will" ? "Will" : name)
+        : null;
       const savedNames = Array.isArray(parsed.selectedNames)
-        ? HOUSEHOLD_NAMES.filter((name) => parsed.selectedNames.includes(name))
+        ? HOUSEHOLD_NAMES.filter((name) => legacyNames.includes(name))
         : HOUSEHOLD_NAMES.slice(0, Math.min(6, Math.max(1, parsed.count || 6)));
       setSelectedNames(savedNames);
-      const savedPayer = parsed.payerName || savedNames[parsed.payerIndex];
+      const savedPayer = (parsed.payerName === "Gay Will" ? "Will" : parsed.payerName) || savedNames[parsed.payerIndex];
       setPayerName(savedNames.includes(savedPayer) ? savedPayer : savedNames[0]);
     } catch {}
   }, []);
