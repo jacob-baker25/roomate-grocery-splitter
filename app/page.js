@@ -147,7 +147,21 @@ export default function Home() {
         {items.length > 0 && <div className="itemEditor">
           {items.map((item, index) => <div className="editRow" key={`${item.code}-${index}`}>
             <div className="itemIndex">{index + 1}</div>
-            <input className="grow" value={item.name} onChange={(e) => updateItem(index, { name: e.target.value })} />
+            <div className="itemNameField grow">
+              <input value={item.name} onChange={(e) => updateItem(index, { name: e.target.value })} />
+              <small>
+                Item {item.code || "without a code"}
+                {item.name !== item.suggested_name
+                  ? " · This name will be remembered"
+                  : item.name_source === "online"
+                    ? " · Found online"
+                    : item.name_source === "catalog"
+                      ? " · Remembered name"
+                      : item.name_source === "receipt"
+                        ? " · Edit it once and the app will remember"
+                        : " · Known item"}
+              </small>
+            </div>
             <div className="moneyInput"><span>$</span><input type="number" min="0" step="0.01" value={(item.price_cents / 100).toFixed(2)} onChange={(e) => updateItem(index, { price_cents: Math.round(Number(e.target.value || 0) * 100) })} /></div>
             <label className="sharedToggle"><input type="checkbox" checked={item.split_mode === "everyone"} onChange={(e) => updateItem(index, { split_mode: e.target.checked ? "everyone" : "choice" })} /><span>Everyone pays</span></label>
             <button className="iconButton" aria-label="Remove item" onClick={() => setItems((current) => current.filter((_, i) => i !== index))}>×</button>

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { db } from "../../../lib/db.js";
 import { HOUSEHOLD_NAMES } from "../../../lib/household.js";
+import { rememberProductNames } from "../../../lib/productCatalog.js";
 
 function cleanName(value) {
   return String(value || "").trim().slice(0, 40);
@@ -23,6 +24,8 @@ export async function POST(request) {
     if (!Array.isArray(body.items) || body.items.length === 0) {
       return NextResponse.json({ error: "Add at least one receipt item." }, { status: 400 });
     }
+
+    await rememberProductNames(body.items);
 
     const requestedGroupKey = String(body.groupAccessKey || "").trim();
     let tripGroup;

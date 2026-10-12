@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractPdfText } from "../../../lib/pdf.js";
 import { parseCostcoText } from "../../../lib/costcoParser.js";
+import { enrichProductNames } from "../../../lib/productCatalog.js";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,8 @@ export async function POST(request) {
       return NextResponse.json({ error: "I could not identify Costco line items in this PDF." }, { status: 422 });
     }
 
-    return NextResponse.json({ ...parsed, rawText: text });
+    const items = await enrichProductNames(parsed.items);
+    return NextResponse.json({ ...parsed, items, rawText: text });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: error.message || "Receipt parsing failed." }, { status: 500 });

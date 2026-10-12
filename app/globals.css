@@ -51,6 +51,9 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .good { color: var(--green); }.warn { color: #9a6b00; }
 .itemEditor { display: flex; flex-direction: column; gap: 8px; }
 .editRow { display: flex; align-items: center; gap: 8px; }
+.itemNameField { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.itemNameField input { width: 100%; }
+.itemNameField small { color: var(--muted); font-size: .76rem; padding-left: 2px; }
 .itemIndex { width: 28px; color: var(--muted); font-size: .8rem; text-align: center; flex: 0 0 auto; }
 .grow { flex: 1; min-width: 0; }
 .moneyInput { position: relative; width: 120px; flex: 0 0 auto; }

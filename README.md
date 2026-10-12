@@ -39,6 +39,8 @@ Run `supabase/rename-will-migration.sql` once to rename Will on trips that were 
 
 Run `supabase/split-modes-migration.sql` once before deploying the Everyone pays and custom-ratio features.
 
+Run `supabase/product-names-migration.sql` once before deploying the self-learning product names. It creates the product catalog and seeds it with all names the app already knows.
+
 The schema enables RLS and creates no browser-access policies. The app talks to Supabase only from server API routes with the service-role key. Do **not** expose the service-role key in client code.
 
 ## 2. Configure environment variables
@@ -90,7 +92,8 @@ The parser is intentionally tuned first to the Costco.com Orders & Purchases PDF
 - recognizes Costco lines such as `E 1150189 ORG SKINYPOP 6.99 N`;
 - applies discount rows such as `388719 /1424237 2.00-` back to the matching item code;
 - recognizes a quantity hint like `2 @ 11.99` and associates it with the next line item;
-- translates known Costco item numbers into stable, clearer display names while leaving unknown names unchanged;
+- uses a database-backed catalog for stable display names and attempts a best-effort online lookup for new Costco item numbers;
+- remembers a corrected unknown name when the trip is created, so that item is translated automatically on every later receipt;
 - compares the sum of parsed net item prices to the receipt subtotal before the trip is created.
 
 Because Costco may alter its PDF format, the creator can edit every parsed item before creating a trip. If a future receipt layout fails, `lib/costcoParser.js` is the main file to extend.
@@ -100,10 +103,10 @@ Because Costco may alter its PDF format, the creator can edit every parsed item 
 - Tax is captured from the receipt but not automatically allocated. This is irrelevant to the supplied Delaware receipt because its tax is $0.00, but a tax-allocation rule should be added before using this broadly in taxable locations.
 - Anyone with a trip link can change selections. That is deliberate for a six-person household MVP. A creator/admin token can be added later if you want locked/finalized trips.
 - Roommates mark themselves done manually. Editing a selection automatically marks them unfinished again.
-- Known item numbers have hard-coded friendlier names. Unknown receipt descriptions remain unchanged and can be edited before creating the trip.
+- Warehouse-only or out-of-stock products may not appear in online search. Their receipt descriptions remain editable, and the app remembers the correction after the trip is created.
 - It polls every five seconds rather than using Supabase Realtime.
 - There is no Venmo API integration; it generates/copies request amounts for the payer.
 
 ## Suggested next upgrades
 
-The most useful next changes are likely: expanding the friendly-name catalog as new Costco item numbers appear, a creator-only finalize/lock action, recurring household defaults, true realtime updates, and a weekly history page showing past trips and totals.
+The most useful next changes are likely: a creator-only finalize/lock action, recurring household defaults, true realtime updates, and a weekly history page showing past trips and totals.

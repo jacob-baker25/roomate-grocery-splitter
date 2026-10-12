@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getCostcoDisplayName, parseCostcoText } from "../lib/costcoParser.js";
 import { calculateSplit } from "../lib/split.js";
+import { cleanSearchResultTitle, findCostcoNameInSearchHtml } from "../lib/costcoLookup.js";
 
 const sample = `
 CHRISTIANA #246
@@ -35,6 +36,8 @@ test("Costco parser handles the supplied receipt shape and item discount", () =>
   assert.equal(parsed.parsedItemCents, 28737);
   const butter = parsed.items.find((i) => i.code === "1424237");
   assert.equal(butter.name, "Kirkland Grass-Fed Salted Butter");
+  assert.equal(butter.receipt_name, "KS GR FD BTR");
+  assert.equal(butter.name_source, "seed");
   assert.equal(butter.original_price_cents, 999);
   assert.equal(butter.discount_cents, 200);
   assert.equal(butter.price_cents, 799);
@@ -42,6 +45,35 @@ test("Costco parser handles the supplied receipt shape and item discount", () =>
   assert.equal(chicken.quantity, 2);
   assert.equal(chicken.name, "Grilled Chipotle Seasoned Chicken");
   assert.equal(parsed.items.find((i) => i.code === "1701671").name, "Kirkland Scented Kitchen Trash Bags");
+});
+
+test("online lookup accepts an exact Costco item result and cleans its title", () => {
+  const html = `<div class="result results_links">
+    <h2><a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fsameday.costco.com%2Fproducts%2Fgoodles&amp;rut=x">Goodles Mac &amp; Cheese Variety Pack, 6 oz, 8-count Item: 1831841</a></h2>
+    <a class="result__snippet">Costco same-day product details.</a>
+  </div>`;
+
+  assert.equal(
+    cleanSearchResultTitle("Bounty Advanced Paper Towels | Costco"),
+    "Bounty Advanced Paper Towels"
+  );
+  assert.deepEqual(findCostcoNameInSearchHtml(html, "1831841", "GOODLESPACK"), {
+    displayName: "Goodles Mac & Cheese Variety Pack, 6 oz, 8-count",
+    sourceUrl: "https://sameday.costco.com/products/goodles",
+    confidence: 0.9
+  });
+});
+
+test("online lookup rejects Costco results that do not contain the exact item code", () => {
+  const html = `<div class="result"><a class="result__a" href="https://www.costco.com/similar.html">Similar Product | Costco</a>
+    <a class="result__snippet">Item 999999</a></div>`;
+  assert.equal(findCostcoNameInSearchHtml(html, "1831841", "GOODLESPACK"), null);
+});
+
+test("online lookup rejects a generic search page instead of treating it as a product name", () => {
+  const html = `<div class="result"><a class="result__a" href="https://sameday.costco.com/store/costco/s?k=2067029">Costco 2067029 Delivery Near Me | Costco Same-Day</a>
+    <a class="result__snippet">Shop Costco products.</a></div>`;
+  assert.equal(findCostcoNameInSearchHtml(html, "2067029", "TIDE PODS"), null);
 });
 
 test("Costco item numbers get stable display names", () => {
