@@ -14,6 +14,8 @@ A small Next.js app for a six-person household Costco run. One person uploads th
 - Remembers a roommate's selected name while they move between trips in the shared list.
 - Lets each roommate choose their name and toggle any item on/off.
 - Supports any split from 1 person through everyone on each item.
+- Lets the purchaser lock household supplies to an automatic equal split across everyone.
+- Supports custom integer-share ratios, such as a 3/5 and 2/5 split, while preserving every cent.
 - Uses cent-safe rounding. Example: $10 / 3 becomes $3.34 + $3.33 + $3.33, so the receipt always reconciles.
 - Tracks who has marked themselves done.
 - Shows running totals, unclaimed items, payer status, and copyable Venmo-request amounts.
@@ -34,6 +36,8 @@ Create a Supabase project and run `supabase/schema.sql` in the Supabase SQL edit
 If the database was created with an earlier version of the app, run `supabase/trip-groups-migration.sql` once instead. It adds the shared trip-list table and places existing trips into one list without changing their direct links.
 
 Run `supabase/rename-will-migration.sql` once to rename Will on trips that were created before the household-name update.
+
+Run `supabase/split-modes-migration.sql` once before deploying the Everyone pays and custom-ratio features.
 
 The schema enables RLS and creates no browser-access policies. The app talks to Supabase only from server API routes with the service-role key. Do **not** expose the service-role key in client code.
 

@@ -13,12 +13,16 @@ export async function PATCH(request, { params }) {
     if (!participant || !item) {
       return NextResponse.json({ error: "Invalid person or item." }, { status: 400 });
     }
+    if ((item.split_mode || "choice") !== "choice") {
+      return NextResponse.json({ error: "This item uses a managed split and cannot be checked individually." }, { status: 400 });
+    }
 
     if (body.selected) {
       await db.upsert("selections", [{
         trip_id: data.trip.id,
         participant_id: participant.id,
-        item_id: item.id
+        item_id: item.id,
+        weight: 1
       }], "trip_id,participant_id,item_id");
     } else {
       await db.delete("selections", `trip_id=eq.${data.trip.id}&participant_id=eq.${participant.id}&item_id=eq.${item.id}`);

@@ -94,3 +94,48 @@ test("split math preserves every penny", () => {
   assert.deepEqual(result.totals, { a: 334, b: 333, c: 333 });
   assert.equal(result.allocatedCents, 1000);
 });
+
+test("Everyone pays items include every trip participant without checkboxes", () => {
+  const people = [
+    { id: "a", sort_order: 0 },
+    { id: "b", sort_order: 1 },
+    { id: "c", sort_order: 2 }
+  ];
+  const items = [{ id: "paper", sort_order: 0, price_cents: 1000, split_mode: "everyone" }];
+  const result = calculateSplit(people, items, []);
+
+  assert.deepEqual(result.totals, { a: 334, b: 333, c: 333 });
+  assert.equal(result.unclaimedCents, 0);
+});
+
+test("custom weights support a 3-to-2 split and preserve the item total", () => {
+  const people = [
+    { id: "jacob", sort_order: 0 },
+    { id: "brandon", sort_order: 1 },
+    { id: "other", sort_order: 2 }
+  ];
+  const items = [{ id: "steaks", sort_order: 0, price_cents: 5795, split_mode: "custom" }];
+  const selections = [
+    { item_id: "steaks", participant_id: "jacob", weight: 2 },
+    { item_id: "steaks", participant_id: "brandon", weight: 3 }
+  ];
+  const result = calculateSplit(people, items, selections);
+
+  assert.deepEqual(result.totals, { jacob: 2318, brandon: 3477, other: 0 });
+  assert.equal(result.allocatedCents, 5795);
+  assert.equal(result.unclaimedCents, 0);
+});
+
+test("custom-weight penny remainders go to the largest fractional share", () => {
+  const people = [
+    { id: "a", sort_order: 0 },
+    { id: "b", sort_order: 1 }
+  ];
+  const items = [{ id: "x", sort_order: 0, price_cents: 100, split_mode: "custom" }];
+  const selections = [
+    { item_id: "x", participant_id: "a", weight: 2 },
+    { item_id: "x", participant_id: "b", weight: 1 }
+  ];
+
+  assert.deepEqual(calculateSplit(people, items, selections).totals, { a: 67, b: 33 });
+});

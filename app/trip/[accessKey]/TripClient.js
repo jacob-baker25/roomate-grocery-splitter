@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatMoney } from "../../../lib/money.js";
+import { allocateCentsByWeight } from "../../../lib/split.js";
 
 export default function TripClient({ accessKey }) {
   const [data, setData] = useState(null);
@@ -9,6 +10,10 @@ export default function TripClient({ accessKey }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(new Set());
   const [copied, setCopied] = useState(false);
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [draftMode, setDraftMode] = useState("choice");
+  const [draftWeights, setDraftWeights] = useState({});
+  const [allocationSaving, setAllocationSaving] = useState(false);
 
   async function load(silent = false) {
     try {
@@ -59,6 +64,45 @@ export default function TripClient({ accessKey }) {
     const person = data?.participants.find((participant) => participant.id === id);
     if (person && data?.tripGroup?.access_key) {
       localStorage.setItem(`costco-splitter-person-name-${data.tripGroup.access_key}`, person.name);
+    }
+  }
+
+  function openAllocationEditor(item) {
+    const mode = item.split_mode || "choice";
+    const weights = Object.fromEntries(data.participants.map((person) => {
+      const selection = data.selections.find((entry) => entry.item_id === item.id && entry.participant_id === person.id);
+      return [person.id, mode === "everyone" ? 1 : Number(selection?.weight || 0)];
+    }));
+    setEditingItemId(item.id);
+    setDraftMode(mode);
+    setDraftWeights(weights);
+    setError("");
+  }
+
+  function changeDraftWeight(participantId, change) {
+    setDraftWeights((current) => ({
+      ...current,
+      [participantId]: Math.min(99, Math.max(0, Number(current[participantId] || 0) + change))
+    }));
+  }
+
+  async function saveAllocation(itemId) {
+    setAllocationSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/trips/${accessKey}/allocation`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantId: personId, itemId, mode: draftMode, weights: draftWeights })
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || "Could not update the split.");
+      setEditingItemId(null);
+      await load();
+    } catch (allocationError) {
+      setError(allocationError.message);
+    } finally {
+      setAllocationSaving(false);
     }
   }
 
@@ -139,16 +183,64 @@ export default function TripClient({ accessKey }) {
         <div><span>Responses</span><strong>{data.participants.filter((p) => p.responded).length}/{data.participants.length}</strong></div>
       </div>
 
+      {error && <div className="error">{error}</div>}
+
       <section className="stack itemList">
         {data.items.map((item) => {
-          const selected = selectedSet.has(item.id);
-          const participants = data.selections.filter((s) => s.item_id === item.id).map((s) => data.participants.find((p) => p.id === s.participant_id)).filter(Boolean);
+          const mode = item.split_mode || "choice";
+          const itemSelections = data.participants.map((person) =>
+            data.selections.find((selection) => selection.item_id === item.id && selection.participant_id === person.id)
+          ).filter(Boolean);
+          const participants = mode === "everyone"
+            ? data.participants
+            : itemSelections.map((selection) => data.participants.find((person) => person.id === selection.participant_id)).filter(Boolean);
+          const selected = mode === "everyone" || selectedSet.has(item.id);
           const myShare = data.split.allocations?.[item.id]?.[personId];
-          return <button key={item.id} className={`itemCard ${selected ? "selected" : ""}`} disabled={saving.has(item.id)} onClick={() => toggle(item.id, !selected)}>
-            <span className="check">{selected ? "✓" : ""}</span>
-            <span className="itemMain"><strong>{item.name}</strong><small>{participants.length ? `Split ${participants.length} way${participants.length === 1 ? "" : "s"}: ${participants.map((p) => p.name).join(", ")}` : "No one has claimed this yet"}{item.discount_cents > 0 ? ` · ${formatMoney(item.discount_cents)} discount applied` : ""}</small></span>
-            <span className="itemPrice"><strong>{formatMoney(item.price_cents)}</strong><small>{selected && myShare != null ? `You: ${formatMoney(myShare)}` : ""}</small></span>
-          </button>;
+          const totalWeight = itemSelections.reduce((sum, selection) => sum + Number(selection.weight || 1), 0);
+          const splitDescription = mode === "everyone"
+            ? "Everyone pays equally"
+            : mode === "custom"
+              ? `Custom ratio: ${itemSelections.map((selection) => {
+                const participant = data.participants.find((person) => person.id === selection.participant_id);
+                return `${participant?.name || "Unknown"} ${selection.weight || 1}/${totalWeight}`;
+              }).join(", ")}`
+              : participants.length
+                ? `Split ${participants.length} way${participants.length === 1 ? "" : "s"}: ${participants.map((person) => person.name).join(", ")}`
+                : "No one has claimed this yet";
+          const canAdjust = mode !== "everyone" || me.id === payer?.id;
+          const preview = editingItemId === item.id && draftMode === "custom"
+            ? allocateCentsByWeight(data.participants, item.price_cents, draftWeights)
+            : {};
+          const draftTotal = Object.values(draftWeights).reduce((sum, weight) => sum + Number(weight || 0), 0);
+
+          return <div className="itemBlock" key={item.id}>
+            <button className={`itemCard ${selected ? "selected" : ""} ${mode !== "choice" ? "locked" : ""}`} disabled={saving.has(item.id) || mode !== "choice"} onClick={() => toggle(item.id, !selected)}>
+              <span className="check">{selected ? "✓" : ""}</span>
+              <span className="itemMain"><strong>{item.name}</strong><small>{splitDescription}{item.discount_cents > 0 ? ` · ${formatMoney(item.discount_cents)} discount applied` : ""}</small></span>
+              <span className="itemPrice"><strong>{formatMoney(item.price_cents)}</strong><small>{selected && myShare != null ? `You: ${formatMoney(myShare)}` : ""}</small></span>
+            </button>
+            {canAdjust && <button className="allocationButton" onClick={() => editingItemId === item.id ? setEditingItemId(null) : openAllocationEditor(item)}>{editingItemId === item.id ? "Cancel" : mode === "custom" ? "Edit custom ratio" : "Adjust split"}</button>}
+
+            {editingItemId === item.id && <div className="allocationEditor stack">
+              <div className="allocationModes">
+                <button className={draftMode === "choice" ? "active" : ""} onClick={() => setDraftMode("choice")}>Let people choose</button>
+                {me.id === payer?.id && <button className={draftMode === "everyone" ? "active" : ""} onClick={() => setDraftMode("everyone")}>Everyone equally</button>}
+                <button className={draftMode === "custom" ? "active" : ""} onClick={() => setDraftMode("custom")}>Custom ratio</button>
+              </div>
+
+              {draftMode === "custom" && <div className="weightList">
+                {data.participants.map((person) => {
+                  const weight = Number(draftWeights[person.id] || 0);
+                  return <div className="weightRow" key={person.id}>
+                    <span><strong>{person.name}</strong><small>{draftTotal ? `${weight}/${draftTotal} · ${formatMoney(preview[person.id] || 0)}` : "Not included"}</small></span>
+                    <div className="stepper"><button aria-label={`Remove a share from ${person.name}`} onClick={() => changeDraftWeight(person.id, -1)} disabled={weight === 0}>−</button><strong>{weight}</strong><button aria-label={`Add a share to ${person.name}`} onClick={() => changeDraftWeight(person.id, 1)}>+</button></div>
+                  </div>;
+                })}
+              </div>}
+
+              <button className="primary" disabled={allocationSaving || (draftMode === "custom" && !draftTotal)} onClick={() => saveAllocation(item.id)}>{allocationSaving ? "Saving…" : "Save split"}</button>
+            </div>}
+          </div>;
         })}
       </section>
 

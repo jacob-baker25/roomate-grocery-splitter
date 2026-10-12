@@ -74,6 +74,7 @@ export async function POST(request) {
       original_price_cents: Math.max(0, Math.round(Number(item.original_price_cents ?? item.price_cents) || 0)),
       discount_cents: Math.max(0, Math.round(Number(item.discount_cents) || 0)),
       quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
+      split_mode: item.split_mode === "everyone" ? "everyone" : "choice",
       sort_order: index
     })));
 

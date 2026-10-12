@@ -41,6 +41,7 @@ create table if not exists public.items (
   original_price_cents integer not null check (original_price_cents >= 0),
   discount_cents integer not null default 0 check (discount_cents >= 0),
   quantity integer not null default 1 check (quantity >= 1),
+  split_mode text not null default 'choice' check (split_mode in ('choice', 'everyone', 'custom')),
   sort_order integer not null
 );
 
@@ -48,6 +49,7 @@ create table if not exists public.selections (
   trip_id uuid not null references public.trips(id) on delete cascade,
   participant_id uuid not null references public.participants(id) on delete cascade,
   item_id uuid not null references public.items(id) on delete cascade,
+  weight integer not null default 1 check (weight > 0),
   primary key (trip_id, participant_id, item_id)
 );
 

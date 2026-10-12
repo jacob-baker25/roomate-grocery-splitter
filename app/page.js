@@ -62,7 +62,7 @@ export default function Home() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not parse receipt.");
       setReceipt(data);
-      setItems(data.items);
+      setItems(data.items.map((item) => ({ ...item, split_mode: "choice" })));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -130,7 +130,7 @@ export default function Home() {
       </section>
 
       <section className="card stack">
-        <div className="sectionTitle"><span className="step">2</span><div><h2>Upload the Costco PDF</h2><p>The parser pulls out item names, prices, quantities and item-level discounts. You can correct anything before creating the trip.</p></div></div>
+        <div className="sectionTitle"><span className="step">2</span><div><h2>Upload the Costco PDF</h2><p>Correct any item details, then mark household supplies that everyone should pay for.</p></div></div>
         <label className="upload">
           <input type="file" accept="application/pdf" onChange={(e) => parseReceipt(e.target.files?.[0])} />
           <strong>{busy && !receipt ? "Reading receipt…" : "Choose PDF receipt"}</strong>
@@ -149,9 +149,10 @@ export default function Home() {
             <div className="itemIndex">{index + 1}</div>
             <input className="grow" value={item.name} onChange={(e) => updateItem(index, { name: e.target.value })} />
             <div className="moneyInput"><span>$</span><input type="number" min="0" step="0.01" value={(item.price_cents / 100).toFixed(2)} onChange={(e) => updateItem(index, { price_cents: Math.round(Number(e.target.value || 0) * 100) })} /></div>
+            <label className="sharedToggle"><input type="checkbox" checked={item.split_mode === "everyone"} onChange={(e) => updateItem(index, { split_mode: e.target.checked ? "everyone" : "choice" })} /><span>Everyone pays</span></label>
             <button className="iconButton" aria-label="Remove item" onClick={() => setItems((current) => current.filter((_, i) => i !== index))}>×</button>
           </div>)}
-          <button className="textButton" onClick={() => setItems((current) => [...current, { code: "", name: "New item", quantity: 1, original_price_cents: 0, discount_cents: 0, price_cents: 0 }])}>+ Add item</button>
+          <button className="textButton" onClick={() => setItems((current) => [...current, { code: "", name: "New item", quantity: 1, original_price_cents: 0, discount_cents: 0, price_cents: 0, split_mode: "choice" }])}>+ Add item</button>
         </div>}
       </section>
 

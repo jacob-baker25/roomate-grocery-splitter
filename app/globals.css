@@ -56,6 +56,9 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .moneyInput { position: relative; width: 120px; flex: 0 0 auto; }
 .moneyInput span { position: absolute; left: 11px; top: 12px; color: var(--muted); }
 .moneyInput input { padding-left: 25px; }
+.sharedToggle { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; }
+.sharedToggle input { width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--green); }
+.sharedToggle span { color: var(--ink); font-size: .78rem; }
 .iconButton { border: 0; background: transparent; font-size: 1.6rem; color: var(--muted); width: 35px; }
 .textButton, .linkButton { border: 0; background: transparent; color: var(--green); font-weight: 800; padding: 6px 0; text-decoration: none; }
 .primary, .secondary { border-radius: 15px; padding: 13px 18px; font-weight: 800; border: 1px solid var(--ink); }
@@ -90,8 +93,11 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .tripMeta { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); }
 .tripMeta strong { color: var(--ink); }
 .itemList { gap: 10px; }
+.itemBlock { display: flex; flex-direction: column; align-items: stretch; }
 .itemCard { width: 100%; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.84); padding: 15px; display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; text-align: left; transition: .15s ease; }
 .itemCard:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(31,46,37,.07); }
+.itemCard:disabled { cursor: default; opacity: 1; color: var(--ink); }
+.itemCard.locked:hover { transform: none; }
 .itemCard.selected { border-color: #89b89d; background: var(--green-soft); }
 .check { width: 30px; height: 30px; border: 1.5px solid #aeb7b0; border-radius: 9px; display: grid; place-items: center; font-weight: 900; color: white; }
 .itemCard.selected .check { background: var(--green); border-color: var(--green); }
@@ -99,6 +105,21 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .itemMain small, .itemPrice small { color: var(--muted); font-size: .78rem; line-height: 1.35; }
 .itemMain strong { overflow-wrap: anywhere; }
 .itemPrice { text-align: right; align-items: flex-end; white-space: nowrap; }
+.allocationButton { align-self: flex-end; margin: 5px 12px 0; padding: 4px 2px; border: 0; background: transparent; color: var(--green); font-size: .8rem; font-weight: 800; }
+.allocationEditor { margin-top: 8px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.allocationModes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.allocationModes button { padding: 9px 8px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font-size: .78rem; font-weight: 750; }
+.allocationModes button.active { border-color: var(--ink); background: var(--ink); color: white; }
+.weightList { display: flex; flex-direction: column; }
+.weightRow { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid #eceeea; }
+.weightRow:last-child { border-bottom: 0; }
+.weightRow > span { display: flex; flex-direction: column; gap: 2px; }
+.weightRow small { color: var(--muted); }
+.stepper { display: grid; grid-template-columns: 34px 32px 34px; align-items: center; text-align: center; }
+.stepper button { width: 34px; height: 34px; border: 1px solid var(--line); background: white; color: var(--ink); font-weight: 900; }
+.stepper button:first-child { border-radius: 9px 0 0 9px; }
+.stepper button:last-child { border-radius: 0 9px 9px 0; }
+.stepper button:disabled { color: #b5bbb6; cursor: not-allowed; }
 .totals { display: flex; flex-direction: column; }
 .totals > div { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 12px 0; border-bottom: 1px solid #eceeea; }
 .totals > div:last-child { border-bottom: 0; }
@@ -113,6 +134,7 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
   .receiptMeta { grid-template-columns: repeat(2, 1fr); }
   .statusStrip { grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .editRow { display: grid; grid-template-columns: 28px 1fr 104px 30px; }
+  .sharedToggle { grid-column: 2 / 4; }
   .moneyInput { width: 104px; }
   .itemCard { grid-template-columns: 34px 1fr; }
   .itemPrice { grid-column: 2; flex-direction: row; align-items: center; justify-content: space-between; text-align: left; width: 100%; }
@@ -120,4 +142,5 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
   .tripGrid { grid-template-columns: 1fr; }
   .topActions { gap: 10px; }
   .groupNotice { align-items: flex-start; }
+  .allocationModes { grid-template-columns: 1fr; }
 }
