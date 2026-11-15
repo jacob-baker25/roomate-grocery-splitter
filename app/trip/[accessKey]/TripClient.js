@@ -14,6 +14,9 @@ export default function TripClient({ accessKey }) {
   const [draftMode, setDraftMode] = useState("choice");
   const [draftWeights, setDraftWeights] = useState({});
   const [allocationSaving, setAllocationSaving] = useState(false);
+  const [renamingItemId, setRenamingItemId] = useState(null);
+  const [draftItemName, setDraftItemName] = useState("");
+  const [nameSaving, setNameSaving] = useState(false);
 
   async function load(silent = false) {
     try {
@@ -77,6 +80,35 @@ export default function TripClient({ accessKey }) {
     setDraftMode(mode);
     setDraftWeights(weights);
     setError("");
+  }
+
+  function openNameEditor(item) {
+    setRenamingItemId(item.id);
+    setDraftItemName(item.name);
+    setError("");
+  }
+
+  async function saveItemName(itemId) {
+    const name = draftItemName.replace(/\s+/g, " ").trim();
+    if (!name) return setError("Enter an item name.");
+
+    setNameSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/trips/${accessKey}/items/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || "Could not rename the item.");
+      setRenamingItemId(null);
+      await load();
+    } catch (nameError) {
+      setError(nameError.message);
+    } finally {
+      setNameSaving(false);
+    }
   }
 
   function changeDraftWeight(participantId, change) {
@@ -219,7 +251,16 @@ export default function TripClient({ accessKey }) {
               <span className="itemMain"><strong>{item.name}</strong><small>{splitDescription}{item.discount_cents > 0 ? ` · ${formatMoney(item.discount_cents)} discount applied` : ""}</small></span>
               <span className="itemPrice"><strong>{formatMoney(item.price_cents)}</strong><small>{selected && myShare != null ? `You: ${formatMoney(myShare)}` : ""}</small></span>
             </button>
-            {canAdjust && <button className="allocationButton" onClick={() => editingItemId === item.id ? setEditingItemId(null) : openAllocationEditor(item)}>{editingItemId === item.id ? "Cancel" : mode === "custom" ? "Edit custom ratio" : "Adjust split"}</button>}
+            <div className="itemActions">
+              <button onClick={() => renamingItemId === item.id ? setRenamingItemId(null) : openNameEditor(item)}>{renamingItemId === item.id ? "Cancel rename" : "Rename item"}</button>
+              {canAdjust && <button onClick={() => editingItemId === item.id ? setEditingItemId(null) : openAllocationEditor(item)}>{editingItemId === item.id ? "Cancel split" : mode === "custom" ? "Edit custom ratio" : "Adjust split"}</button>}
+            </div>
+
+            {renamingItemId === item.id && <div className="nameEditor">
+              <label><span>Item name</span><input autoFocus value={draftItemName} maxLength={120} onChange={(event) => setDraftItemName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveItemName(item.id); }} /></label>
+              <button className="primary" disabled={nameSaving || !draftItemName.trim()} onClick={() => saveItemName(item.id)}>{nameSaving ? "Saving…" : "Save name"}</button>
+              {item.item_code && <small>Future receipts with item {item.item_code} will use this name too.</small>}
+            </div>}
 
             {editingItemId === item.id && <div className="allocationEditor stack">
               <div className="allocationModes">

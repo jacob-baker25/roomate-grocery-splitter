@@ -41,6 +41,8 @@ Run `supabase/split-modes-migration.sql` once before deploying the Everyone pays
 
 Run `supabase/product-names-migration.sql` once before deploying the self-learning product names. It creates the product catalog and seeds it with all names the app already knows.
 
+Run `supabase/add-november-items-migration.sql` to add the salt, pepper, and Kraft Singles names and repair those names on trips that were already created.
+
 The schema enables RLS and creates no browser-access policies. The app talks to Supabase only from server API routes with the service-role key. Do **not** expose the service-role key in client code.
 
 ## 2. Configure environment variables
@@ -93,7 +95,7 @@ The parser is intentionally tuned first to the Costco.com Orders & Purchases PDF
 - applies discount rows such as `388719 /1424237 2.00-` back to the matching item code;
 - recognizes a quantity hint like `2 @ 11.99` and associates it with the next line item;
 - uses a database-backed catalog for stable display names and attempts a best-effort online lookup for new Costco item numbers;
-- remembers a corrected unknown name when the trip is created, so that item is translated automatically on every later receipt;
+- remembers a corrected unknown name before or after the trip is created, so that item is translated automatically on every later receipt;
 - compares the sum of parsed net item prices to the receipt subtotal before the trip is created.
 
 Because Costco may alter its PDF format, the creator can edit every parsed item before creating a trip. If a future receipt layout fails, `lib/costcoParser.js` is the main file to extend.

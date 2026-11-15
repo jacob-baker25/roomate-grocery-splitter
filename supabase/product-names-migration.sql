@@ -43,5 +43,8 @@ values
   ('1717856', 'Scotch-Brite Zero Scratch Sponges, 24-count', 'seed', 1),
   ('2046269', 'Mrs. Meyer''s Clean Day Hand Soap Variety Pack, 4-count', 'seed', 1),
   ('1478988', 'Kinder''s Buttery Garlic & Herb Seasoning', 'seed', 1),
-  ('692731', 'Kirkland Organic Extra Virgin Olive Oil', 'seed', 1)
+  ('692731', 'Kirkland Organic Extra Virgin Olive Oil', 'seed', 1),
+  ('384732', 'Kirkland Signature Pure Sea Salt, 30 oz', 'seed', 1),
+  ('164981', 'Kirkland Signature Fine Ground Black Pepper, 12.3 oz', 'seed', 1),
+  ('96928', 'Kraft Singles American Cheese, 96 Slices, 4 lbs', 'seed', 1)
 on conflict (item_code) do nothing;

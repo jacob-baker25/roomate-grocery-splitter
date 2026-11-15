@@ -108,7 +108,11 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .itemMain small, .itemPrice small { color: var(--muted); font-size: .78rem; line-height: 1.35; }
 .itemMain strong { overflow-wrap: anywhere; }
 .itemPrice { text-align: right; align-items: flex-end; white-space: nowrap; }
-.allocationButton { align-self: flex-end; margin: 5px 12px 0; padding: 4px 2px; border: 0; background: transparent; color: var(--green); font-size: .8rem; font-weight: 800; }
+.itemActions { align-self: flex-end; display: flex; gap: 14px; margin: 5px 12px 0; }
+.itemActions button { padding: 4px 2px; border: 0; background: transparent; color: var(--green); font-size: .8rem; font-weight: 800; }
+.nameEditor { margin-top: 8px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 10px; }
+.nameEditor .primary { padding: 12px 16px; }
+.nameEditor > small { grid-column: 1 / -1; color: var(--muted); }
 .allocationEditor { margin-top: 8px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
 .allocationModes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .allocationModes button { padding: 9px 8px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font-size: .78rem; font-weight: 750; }
@@ -146,4 +150,6 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
   .topActions { gap: 10px; }
   .groupNotice { align-items: flex-start; }
   .allocationModes { grid-template-columns: 1fr; }
+  .nameEditor { grid-template-columns: 1fr; }
+  .nameEditor > small { grid-column: 1; }
 }
