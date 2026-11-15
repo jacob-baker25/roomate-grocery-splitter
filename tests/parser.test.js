@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getCostcoDisplayName, parseCostcoText } from "../lib/costcoParser.js";
 import { calculateSplit } from "../lib/split.js";
-import { cleanSearchResultTitle, findCostcoNameInSearchHtml } from "../lib/costcoLookup.js";
+import { cleanSearchResultTitle, findCostcoNameInSearchHtml, lookupCostcoProduct, lookupUnknownProducts } from "../lib/costcoLookup.js";
 
 const sample = `
 CHRISTIANA #246
@@ -74,6 +74,70 @@ test("online lookup rejects a generic search page instead of treating it as a pr
   const html = `<div class="result"><a class="result__a" href="https://sameday.costco.com/store/costco/s?k=2067029">Costco 2067029 Delivery Near Me | Costco Same-Day</a>
     <a class="result__snippet">Shop Costco products.</a></div>`;
   assert.equal(findCostcoNameInSearchHtml(html, "2067029", "TIDE PODS"), null);
+});
+
+test("online lookup rejects localized Costco search pages with extra numbers", () => {
+  const html = `<div class="result"><h2><a class="result__a" href="https://sameday.costco.com/store/costco/s?k=96928%2019510">Costco 96928 19510 Delivery Near Me | Costco Same-Day</a></h2>
+    <a class="result__snippet">Shop Costco products near you.</a></div>`;
+  assert.equal(findCostcoNameInSearchHtml(html, "96928", "KRAFT SINGLES"), null);
+});
+
+test("online lookup prefers a descriptive product name over receipt-style abbreviations", () => {
+  const html = `<div class="result"><h2><a class="result__a" href="https://example.com/ks-pepper-164981">KS Fine Ground Black Pepper 12.3oz 164981</a></h2></div>
+    <div class="result"><h2><a class="result__a" href="https://example.com/kirkland-signature-fine-ground-black-pepper-164981">Kirkland Signature Fine Ground Black Pepper, 12.3 oz</a></h2></div>`;
+  assert.equal(
+    findCostcoNameInSearchHtml(html, "164981", "KS BLK PEPPER").displayName,
+    "Kirkland Signature Fine Ground Black Pepper, 12.3 oz"
+  );
+});
+
+test("online lookup retries a temporary search failure", async () => {
+  let calls = 0;
+  const productHtml = `<div class="result"><h2><a class="result__a" href="https://example.com/costco/96928-kraft-singles">Kraft Singles American Cheese, 96 Slices, 4 lbs (#96928)</a></h2>
+    <a class="result__snippet">Costco product details.</a></div>`;
+  const result = await lookupCostcoProduct("96928", "KRAFT SINGLES", async () => {
+    calls += 1;
+    return calls === 1
+      ? { ok: false, status: 429, text: async () => "" }
+      : { ok: true, status: 200, text: async () => productHtml };
+  });
+
+  assert.equal(calls, 2);
+  assert.equal(result.displayName, "Kraft Singles American Cheese, 96 Slices, 4 lbs");
+});
+
+test("online lookup tries a simpler query after irrelevant results", async () => {
+  const urls = [];
+  const irrelevantHtml = `<div class="result"><a class="result__a" href="https://example.com/unrelated">Unrelated result</a></div>`;
+  const productHtml = `<div class="result"><h2><a class="result__a" href="https://example.com/costco/384732-sea-salt">Kirkland Signature Pure Sea Salt, 30 oz (#384732)</a></h2>
+    <a class="result__snippet">Costco product details.</a></div>`;
+  const result = await lookupCostcoProduct("384732", "KS SEA SALT", async (url) => {
+    urls.push(url);
+    return { ok: true, status: 200, text: async () => urls.length === 1 ? irrelevantHtml : productHtml };
+  });
+
+  assert.equal(urls.length, 2);
+  assert.match(decodeURIComponent(urls[1]), /Costco product/);
+  assert.equal(result.displayName, "Kirkland Signature Pure Sea Salt, 30 oz");
+});
+
+test("unknown product lookups run sequentially to avoid search throttling", async () => {
+  let active = 0;
+  let maxActive = 0;
+  const results = await lookupUnknownProducts([
+    { code: "11111", receipt_name: "FIRST" },
+    { code: "22222", receipt_name: "SECOND" },
+    { code: "33333", receipt_name: "THIRD" }
+  ], async (code) => {
+    active += 1;
+    maxActive = Math.max(maxActive, active);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    active -= 1;
+    return { displayName: `Product ${code}` };
+  });
+
+  assert.equal(maxActive, 1);
+  assert.equal(results.size, 3);
 });
 
 test("Costco item numbers get stable display names", () => {
